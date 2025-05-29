@@ -1,0 +1,335 @@
+Харківський національний університет радіоелектроніки
+Факультет комп’ютерних наук
+Катедра програмної інженерії
+
+ЗВІТ
+з лабораторної роботи № 2
+з дисципліни «Скриптові мови програмування»
+на тему: «Консольний додаток "Продовольчий магазин Весна"»
+
+Виконав
+ст. гр. ПЗПІ-23-2
+Малишкін Андрій Сергійович
+
+Перевірив
+ст. викладач катедри ПІ
+Сокорчук Ігор Петрович
+
+Харків 2025
+
+Консольний додаток "Продовольчий магазин Весна"
+
+Постановка задачі
+Розробити консольний застосунок для симуляції роботи продовольчого магазину з функціоналом вибору товарів, 
+формування кошика покупок, створення підсумкового рахунку та налаштування профілю користувача.
+
+Хід роботи
+Програму побудуємо за принципом об'єктно-орієнтованого програмування з використанням двох основних класів:
+Клас DB - відповідатиме за взаємодію з базою даних SQLite, зберігання інформації про кошик та профіль користувача.
+Клас App - реалізує основну логіку додатка, користувацький інтерфейс та обробку команд.
+
+Для зберігання даних використовується база даних SQLite з двома таблицями:
+Таблиця `cart` містить інформацію про товари в кошику з полями `product_id` (первинний ключ) та `quantity` (кількість товару).
+Таблиця `profile` зберігає профіль користувача з полями `id`, `name` та `age`.
+
+Клас DB інкапсулює всі операції з базою даних. Конструктор створює з'єднання з базою та ініціалізує необхідні таблиці:
+
+```php
+$this->db = new SQLite3($file);
+$this->db->exec("CREATE TABLE IF NOT EXISTS cart (...)");
+```
+
+Методи класу забезпечують основні операції з данними: `getCart()` повертає поточний вміст кошика, `updateCart()` додає або видаляє товари, 
+`setProfile()` зберігає інформацію про користувача з використанням підготовлених запитів для безпеки.
+
+Клас App містить основну логіку програми та управляє користувацьким інтерфейсом. 
+У конструкторі ініціалізується з'єднання з базою даних, визначається асоціативний масив товарів та формується текстове меню.
+Масив товарів містить 7 позицій з назвами українською мовою та цінами:
+
+```php
+$this->products = [
+    1 => ['name' => 'Молоко пастеризоване', 'price' => 12],
+    // ... інші товари
+];
+```
+
+Метод `run()` реалізує головний цикл програми з використанням конструкції `match` для обробки команд користувача. 
+Програма продовжує роботу до отримання команди виходу.
+Метод `shop()` реалізує режим покупок з відображенням списку товарів, валідацією введених даних та оновленням кошика. 
+Після кожної операції відображається поточний вміст кошика.
+Метод `checkout()` формує підсумковий рахунок з детальною інформацією про кожен товар, включаючи назву, ціну, кількість та загальну вартість. 
+В кінці виводиться загальна сума до сплати.
+Метод `profile()` обробляє введення персональних даних користувача з валідацією імені (має містити принаймні одну літеру) та віку (від 7 до 150 років).
+
+Для форматування виводу використовуються допоміжні методи: `pad()` для вирівнювання тексту, 
+`buildProductsMenu()` для формування меню товарів, `rltrim()` для читання та обробки введення користувача.
+
+Програма здійснює всебічну перевірку введених користувачем даних: існування пунктів меню, коректність номерів товарів, 
+допустимі значення кількості товарів (0-100), валідність імені та віку користувача.
+
+Висновки
+
+У ході виконання лабораторної роботи було розроблено консольний застосунок "Продовольчий магазин Весна" на мові PHP з використанням 
+об'єктно-орієнтованого підходу та бази даних SQLite. Програма успішно реалізує весь необхідний функціонал для симуляції роботи магазину, 
+включаючи вибір товарів, управління кошиком, формування рахунків та налаштування профілю користувача з належною валідацією введених даних. 
+Архітектура додатка забезпечує чітке розділення відповідальності між класами DB та App, що робить код зрозумілим та легким для подальшого розширення.
+
+ДОДАТОК А
+Відеозапис
+
+Відеозапис презентації результатів лабораторної роботи: https://www.youtube.com/watch?v=OmEySenJeic
+
+00:00 - Вступ
+Представлення студента та теми лабораторної роботи.
+
+00:19 - Огляд класів DB та App
+Опис основних класів програми: DB для роботи з базою даних та App для бізнес-логіки.
+
+00:44 - Клас DB: робота з SQLite
+Розгляд функціоналу класу DB, включаючи ініціалізацію об'єкту для роботи з базою даних, методи getCard, updateCard та setProfile.
+
+02:45 - Клас App: основні функції
+Огляд методів класу App: run, rltrim, pad, buildProductsMenu, menu.
+
+06:04 - Методи shop, checkout та profile
+Детальний опис функцій shop, checkout та profile, які відповідають за роботу з кошиком та профілем користувача.
+
+08:30 - Демонстрація роботи програми
+Практичний показ функціонування додатку, включаючи додавання товарів, перегляд рахунку та налаштування профілю.
+
+Додаток Б
+Вихідний код
+
+```php
+1   #!/usr/bin/env php
+2   <?php
+3   
+4   declare(strict_types=1);
+5   
+6   class DB
+7   {
+8       private SQLite3 $db;
+9   
+10      public function __construct(string $file)
+11      {
+12          $this->db = new SQLite3($file);
+13  
+14          $this->db->exec("CREATE TABLE IF NOT EXISTS cart (
+15              product_id INTEGER PRIMARY KEY,
+16              quantity INTEGER
+17          )");
+18  
+19          $this->db->exec("CREATE TABLE IF NOT EXISTS profile (
+20              id INTEGER PRIMARY KEY,
+21              name TEXT,
+22              age INTEGER
+23          )");
+24      }
+25  
+26      public function getCart(): array
+27      {
+28          $res = $this->db->query("SELECT product_id, quantity FROM cart");
+29          $cart = [];
+30          while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+31              $cart[$row['product_id']] = $row['quantity'];
+32          }
+33          return $cart;
+34      }
+35  
+36      public function updateCart(int $pid, int $qty): void
+37      {
+38          if ($qty > 0) {
+39              $this->db->exec("REPLACE INTO cart 
+40                  (product_id, quantity) VALUES ($pid, $qty)"
+41              );
+42          } else {
+43              $this->db->exec("DELETE FROM cart 
+44                  WHERE product_id = $pid"
+45              );
+46          }
+47      }
+48  
+49      public function setProfile(string $name, int $age): void
+50      {
+51          $this->db->exec("DELETE FROM profile");
+52          $stmt = $this->db->prepare("INSERT INTO profile 
+53              (name, age) VALUES (:name, :age)"
+54          );
+55          $stmt->bindValue(':name', $name, SQLITE3_TEXT);
+56          $stmt->bindValue(':age', $age, SQLITE3_INTEGER);
+57          $stmt->execute();
+58      }
+59  }
+60  
+61  class App
+62  {
+63      private DB $db;
+64      private array  $products;
+65      private string $productsMenu;
+66      private string $mainMenu;
+67      private string $dbFile = __DIR__ . '/smp-pzpi-23-2-malyshkin-andrii-lab2.db';
+68  
+69      public function __construct()
+70      {
+71          $this->db = new DB($this->dbFile);
+72          $this->products = [
+73              1 => ['name' => 'Молоко пастеризоване', 'price' => 12],
+74              2 => ['name' => 'Хліб чорний',          'price' =>  9],
+75              3 => ['name' => 'Сир білий',            'price' => 21],
+76              4 => ['name' => 'Сметана 20%',          'price' => 25],
+77              5 => ['name' => 'Кефір 1%',             'price' => 19],
+78              6 => ['name' => 'Вода газована',        'price' => 18],
+79              7 => ['name' => 'Печиво "Весна"',       'price' => 14],
+80          ];
+81          $this->buildProductsMenu();
+82          $this->mainMenu = "\n"
+83              . "1 Вибрати товари\n"
+84              . "2 Отримати підсумковий рахунок\n"
+85              . "3 Налаштувати свій профіль\n"
+86              . "0 Вийти з програми\n"
+87              . "Введіть команду: ";
+88      }
+89  
+90      public function run(): void
+91      {
+92          while (true) {
+93              $this->menu();
+94              $cmd = (int) $this->rltrim($this->mainMenu);
+95              match ($cmd) {
+96                  1 => $this->shop(),
+97                  2 => $this->checkout(),
+98                  3 => $this->profile(),
+99                  0 => exit,
+100                 default => print("ПОМИЛКА! Введіть правильну команду" . PHP_EOL),
+101             };
+102         }
+103     }
+104 
+105     private function pad(string $str, int $len): string
+106     {
+107         return $str . str_repeat(' ', max(0, $len - mb_strlen($str)));
+108     }
+109 
+110     private function buildProductsMenu(): void
+111     {
+112         $padName = 0;
+113         $count = count($this->products);
+114         foreach ($this->products as $p) {
+115             $padName = max($padName, mb_strlen($p['name']));
+116         }
+117         $padName += 2;
+118         $padNum = strlen((string)$count) + 2;
+119 
+120         $menu = PHP_EOL;
+121         $menu .= $this->pad('№', $padNum) . 
+122                  $this->pad('НАЗВА', $padName) . 'ЦІНА' . PHP_EOL;
+123 
+124         foreach ($this->products as $i => $p) {
+125             $menu .= $this->pad((string)$i, $padNum) . 
+126                      $this->pad($p['name'], $padName) . $p['price'] . PHP_EOL;
+127         }
+128         $menu .= $this->pad('',  $padNum) . '-----------' . PHP_EOL;
+129         $menu .= $this->pad('0', $padNum) . 'ПОВЕРНУТИСЯ' . PHP_EOL;
+130 
+131         $this->productsMenu = $menu;
+132     }
+133 
+134     private function rltrim(string $prompt): string
+135     {
+136         return trim(readline($prompt));
+137     }
+138 
+139     private function menu(): void
+140     {
+141         echo "\n"
+142            . "################################\n"
+143            . "# ПРОДОВОЛЬЧИЙ МАГАЗИН \"ВЕСНА\" #\n"
+144            . "################################\n";
+145     }
+146 
+147     private function shop(): void
+148     {
+149         while (true) {
+150             echo $this->productsMenu;
+151             $pid = (int) $this->rltrim('Виберіть товар: ');
+152             if ($pid === 0) break;
+153             if (!isset($this->products[$pid])) {
+154                 echo 'ПОМИЛКА! ВКАЗАНО НЕПРАВИЛЬНИЙ НОМЕР ТОВАРУ' . PHP_EOL;
+155                 continue;
+156             }
+157             echo PHP_EOL . 'Вибрано: ' . $this->products[$pid]['name'] . PHP_EOL;
+158             $qty = (int) $this->rltrim('Введіть кількість, штук: ');
+159             if ($qty < 0 || $qty > 100) {
+160                 echo 'ПОМИЛКА! Кількість товару має бути від 1 до 100' . PHP_EOL;
+161                 continue;
+162             }
+163             if ($qty === 0) print('ВИДАЛЯЮ З КОШИКА' . PHP_EOL);
+164             $this->db->updateCart($pid, $qty);
+165             $cart = $this->db->getCart();
+166             if (empty($cart)) {
+167                 echo 'КОШИК ПОРОЖНІЙ' . PHP_EOL;
+168                 continue;
+169             }
+170             $padName = 0;
+171             foreach ($cart as $id => $q) {
+172                 $padName = max($padName, mb_strlen($this->products[$id]['name']));
+173             }
+174             $padName += 2;
+175             echo PHP_EOL . $this->pad('НАЗВА', $padName) . '   КІЛЬКІСТЬ' . PHP_EOL;
+176             foreach ($cart as $id => $q) {
+177                 echo $this->pad($this->products[$id]['name'], $padName) . '   ' . $q . PHP_EOL;
+178             }
+179         }
+180     }
+181 
+182     private function checkout(): void
+183     {
+184         $cart = $this->db->getCart();
+185         if (empty($cart)) {
+186             echo PHP_EOL . 'КОШИК ПОРОЖНІЙ' . PHP_EOL;
+187             return;
+188         }
+189         $padName = 0;
+190         $count = count($cart);
+191         foreach ($cart as $id => $q) {
+192             $padName = max($padName, mb_strlen($this->products[$id]['name']));
+193         }
+194         $padName += 2;
+195         $padNum = strlen((string)$count) + 2;
+196         echo PHP_EOL . $this->pad('№', $padNum) . 
+197                        $this->pad('НАЗВА', $padName) . 'ЦІНА  КІЛЬКІСТЬ  ВАРТІСТЬ' . PHP_EOL;
+198         $i = 0; $total = 0;
+199         foreach ($cart as $id => $q) {
+200             $p = $this->products[$id];
+201             $cost = $p['price'] * $q;
+202             echo $this->pad((string)++$i, $padNum)
+203                . $this->pad($p['name'], $padName)
+204                . $this->pad((string)$p['price'], 6)
+205                . $this->pad((string)$q, 11)
+206                . $cost . PHP_EOL;
+207             $total += $cost;
+208         }
+209         echo 'РАЗОМ ДО СПЛАТИ: ' . $total . PHP_EOL;
+210     }
+211 
+212     private function profile(): void
+213     {
+214         do {
+215             $name = $this->rltrim("\nВаше ім'я: ");
+216         } while (
+217             !preg_match('/[\p{L}]/u', $name) && 
+218             print('ПОМИЛКА! Імʼя має містити хоча б одну літеру' . PHP_EOL)
+219         );
+220         do {
+221             $age = (int) $this->rltrim('Ваш вік: ');
+222         } while (
+223             ($age < 7 || $age > 150) && 
+224             print('ПОМИЛКА! Вік має бути від 7 до 150' . PHP_EOL)
+225         );
+226         $this->db->setProfile($name, $age);
+227     }
+228 }
+229 
+230 $app = new App();
+231 $app->run();
+```

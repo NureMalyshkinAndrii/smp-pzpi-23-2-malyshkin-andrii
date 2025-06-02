@@ -1,0 +1,393 @@
+Харківський національний університет радіоелектроніки
+Факультет комп’ютерних наук
+Катедра програмної інженерії
+
+ЗВІТ
+з лабораторної роботи № 3
+з дисципліни «Скриптові мови програмування»
+на тему: «Створення Web-застосунків за допомогою PHP»
+
+Виконав
+ст. гр. ПЗПІ-23-2
+Малишкін Андрій Сергійович
+
+Перевірив
+ст. викладач катедри ПІ
+Сокорчук Ігор Петрович
+
+Харків 2025
+
+
+3 СТВОРЕННЯ WEB-ЗАТОСУНКІВ ЗА ДОПОМОГОЮ PHP
+
+
+1 ІСТОРІЯ ЗМІН
+
+№ 	Дата	       Версія звіту   	Опис змін та виправлень
+1 	02.06.2025     0.1	        Створено розділи «Історія змін», «Завдання», «Опис виконаної роботи», «Висновки», оформлено додатки
+
+
+2 ЗАВДАННЯ
+
+Отримати базові знання з розробки сайтів. Розробити робочий вебсайт інтернет-магазину, який містить сторінку товарів та сторінку кошика. 
+Кожна сторінка повинна включати шапку, основну частину та підвал (footer). На сторінці товарів необхідно реалізувати відображення 
+списку доступних для покупки найменувань із можливістю вибору кількості одиниць товару та кнопкою «купити». 
+Після натискання на кнопку має виконуватись відправлення форми методом POST на сервер, де дані зберігаються в сесію. 
+Сторінка кошика повинна виводити перелік обраних користувачем товарів, збережених у сесії. Якщо користувач ще не додав жодного товару, 
+має відображатися повідомлення з посиланням «Перейти до покупок».
+
+
+3 ОПИС ВИКОНАНОЇ РОБОТИ
+
+3.1 Загальна структура проекту
+Розроблений веб-додаток являє собою простий інтернет-магазин продуктів харчування, побудований на основі PHP та HTML 
+з використанням Tailwind CSS для стилізації. Проект має модульну архітектуру з чіткою структурою файлів та логічним розподілом функціональності.
+Основну структуру складають п'ять головних PHP-файлів: index.php як точка входу, home.php для головної сторінки, 
+products.php для каталогу товарів з можливістю додавання до кошика, cart.php для управління кошиком покупок та їх видалення. 
+Додатково створена папка includes з файлами header.php та footer.php для забезпечення єдиного дизайну, папка store з 
+JSON-файлом продуктів та папка images для статичних ресурсів.
+
+3.2 Архітектурні рішення
+Архітектура додатку базується на принципах модульності та повторного використання коду. Файл index.php виконує роль маршрутизатора, 
+автоматично перенаправляючи користувачів на головну сторінку через header("Location: home.php"). Це забезпечує єдину точку входу в систему та покращує навігацію.
+Для забезпечення єдиного інтерфейсу використовується шаблонізація через включення спільних компонентів. Кожна сторінка починається з include 
+'includes/header.php' та завершується include 'includes/footer.php', що гарантує консистентність дизайну та навігації по всьому сайту.
+Дані про товари зберігаються у JSON-форматі в файлі store/products.json, що забезпечує простоту управління асортиментом без необхідності 
+використання бази даних. Структура JSON включає ідентифікатор, назву та ціну кожного товару: "1": { "name": "Молоко пастеризоване", "price": 12 }.
+
+3.3 Робота з сесіями
+Ключовою частиною функціональності є система управління кошиком через PHP-сесії. На кожній сторінці ініціалізується сесія командою session_start(), 
+що дозволяє зберігати стан кошика між різними запитами користувача.
+Кошик реалізований як асоціативний масив у змінній $_SESSION['cart'], де кожен елемент містить інформацію про товар: ідентифікатор, назву, ціну та кількість. 
+Для безпечної роботи з потенційно неіснуючими даними використовується оператор null coalescing: $cart = $_SESSION['cart'] ?? [].
+На сторінці товарів реалізована складна логіка додавання множинних товарів одночасно. Система обробляє масив кількостей 
+$quantities = $_POST['quantities'] ?? [] та перевіряє кожне значення на валідність через is_numeric($count) && (int)$count > 0. 
+При додаванні товару система перевіряє його наявність у кошику і або оновлює кількість $_SESSION['cart'][$id]['count'] += $count, або створює новий запис з повною інформацією про товар.
+Видалення товарів з кошика реалізовано через POST-запити з перевіркою існування товару: if (isset($cart[$removeId])) { unset($cart[$removeId]); }. 
+Після кожної операції з кошиком виконується перенаправлення для оновлення інтерфейсу.
+
+3.4 Обробка користувацького вводу
+Безпека додатку забезпечується через багаторівневу валідацію та санітизацію вхідних даних. При обробці форм використовується перевірка методу запиту 
+$_SERVER['REQUEST_METHOD'] === 'POST' та приведення типів для запобігання некоректному вводу.
+На сторінці товарів реалізована складна система валідації множинних полів вводу. Кожне поле кількості перевіряється на числовий формат та позитивне значення, 
+а система відстежує загальну валідність форми через змінну $valid. При виявленні помилок користувачу показується повідомлення: 
+$error = 'Перевірте будь ласка введені дані'.
+Для запобігання XSS-атакам всі дані користувача екрануються функцією htmlspecialchars() при виведенні: <?= htmlspecialchars($product['name']) ?>. 
+Після обробки POST-запитів виконується перенаправлення через header('Location: cart.php') для запобігання повторному відправленню форми при оновленні сторінки.
+
+3.5 Інтерфейс користувача
+Дизайн додатку створений з використанням Tailwind CSS, що забезпечує сучасний та адаптивний інтерфейс. Навігація реалізована через 
+динамічне підсвічування активної сторінки: $current_page = basename($_SERVER['PHP_SELF']) з подальшою умовною стилізацією активних посилань.
+Сторінка товарів містить інтерактивну форму з окремими полями для кількості кожного товару. Користувач може одночасно вибрати кілька товарів у 
+різних кількостях через поля <input type="number" name="quantities[<?= $id ?>]"> та додати їх до кошика одним кліком. Система відображає помилки 
+валідації через червоні повідомлення над формою.
+Таблиця кошика містить повну інформацію про товари з можливістю видалення кожної позиції через окремі форми.
+Загальна сума розраховується динамічно через цикл foreach з накопиченням: $total += $sum.
+
+3.6 Технічні особливості реалізації
+Для локального тестування створений bash-скрипт run, який запускає вбудований PHP-сервер на порту 8080. Це забезпечує швидке розгортання 
+для розробки та тестування без необхідності налаштування повноцінного веб-сервера.
+Структура проекту дозволяє легко масштабувати функціональність через додавання нових сторінок та компонентів. 
+Використання JSON для зберігання даних товарів забезпечує простоту редагування асортименту без втручання в код додатку.
+Додаток демонструє основні принципи розробки веб-застосунків на PHP: роботу з сесіями, обробку форм, шаблонізацію та безпечне управління даними користувача.
+
+
+3 ВИСНОВКИ
+
+У ході лабораторної роботи було створено простий веб-додаток інтернет-магазину з каталогом товарів і кошиком. 
+Реалізовано збереження даних у сесії, обробку форм методом POST, базову валідацію.
+Використання Tailwind CSS забезпечило адаптивний і сучасний інтерфейс. Структура коду дозволяє легко масштабувати проєкт. 
+Додаток демонструє основи PHP-розробки: роботу з сесіями, шаблонами та формами.
+
+ДОДАТОК А
+Відеозапис
+
+Відеозапис презентації результатів лабораторної роботи: https://youtu.be/D-dZ8Idbxbc
+
+00:00 - Вступ
+Представлення студента та теми лабораторної роботи.
+
+00:14 - Структура проекту
+Розгляд файлів, які не відповідають за основну логіку.
+
+02:10 - Логіка додавання продуктів в кошик
+Розгляд файлу products.php.
+
+04:12 - Логіка видалення продуктів з кошику
+Розгляд файлу cart.php
+
+05:25 - Демонстрація роботи програми
+Практичний показ функціонування додатку, додавання та видалення товарів з кошику.
+
+Додаток Б
+Вихідний код
+
+run
+1       #!/bin/bash
+2       php -S localhost:8080
+
+index.php
+1       <?php
+2       header("Location: home.php");
+3       exit;
+
+home.php
+01      <?php
+02      session_start();
+03      include 'includes/header.php';
+04      ?>
+05
+06      <h1 class="text-2xl font-bold text-center mt-40">Ласкаво просимо до продовольчого магазину «Весна»</h1>
+07      <p class="text-center mt-4 text-gray-600">
+08          Оберіть 
+09          <a href="products.php" class="text-green-600 underline">товари</a> 
+10          для покупки або перегляньте 
+11          <a href="cart.php" class="text-green-600 underline">кошик</a>.
+12      </p>
+13
+14      <?php include 'includes/footer.php'; ?>
+
+includes/header.php
+01      <?php
+02      session_start();
+03      include 'includes/header.php';
+04      ?>
+05
+06      <h1 class="text-2xl font-bold text-center mt-40">Ласкаво просимо до продовольчого магазину «Весна»</h1>
+07      <p class="text-center mt-4 text-gray-600">
+08          Оберіть 
+09          <a href="products.php" class="text-green-600 underline">товари</a> 
+10          для покупки або перегляньте 
+11          <a href="cart.php" class="text-green-600 underline">кошик</a>.
+12      </p>
+13
+14      <?php include 'includes/footer.php'; ?>
+➜  smp-pzpi-23-2-malyshkin-andrii-lab3 git:(main) ✗ ./numlines includes/header.php 
+01      <!DOCTYPE html>
+02      <html lang="uk">
+03      <head>
+04          <meta charset="UTF-8">
+05          <title>ПрМ «Весна»</title>
+06          <link rel="shortcut icon" href="images/image.png" type="image/x-icon">
+07          <script src="https://cdn.tailwindcss.com"></script>
+08      </head>
+09      <body class="bg-gray-100 text-gray-800 flex flex-col min-h-screen">
+10      <?php $current_page = basename($_SERVER['PHP_SELF']); ?>
+11      <header class="bg-white shadow py-4 px-8 flex justify-between items-center">
+12          <a href="home.php" class="text-xl font-bold hover:underline">ПрМ «Весна»</a>
+13          <nav class="space-x-6">
+14              <a href="home.php"
+15                 class="<?= $current_page === 'home.php' ? 'underline text-green-800' : 'text-green-600' ?> text-lg font-bold hover:underline">
+16                  Home
+17              </a>
+18              <a href="products.php"
+19                 class="<?= $current_page === 'products.php' ? 'underline text-green-800' : 'text-green-600' ?> text-lg font-bold hover:underline">
+20                  Products
+21              </a>
+22              <a href="cart.php"
+23                 class="<?= $current_page === 'cart.php' ? 'underline text-green-800' : 'text-green-600' ?> text-lg font-bold hover:underline">
+24                  Cart
+25              </a>
+26          </nav>
+27      </header>
+28
+
+includes/footer.php
+01      <?php $current_page = basename($_SERVER['PHP_SELF']); ?>
+02      </main>
+03      <footer class="bg-white shadow p-6 mt-15 text-center">
+04          <nav class="space-x-4">
+05              <a href="home.php"
+06                 class="<?= $current_page === 'home.php' ? 'underline text-gray-800' : 'text-gray-600' ?> hover:underline">
+07                  Home
+08              </a>
+09              <a href="products.php"
+10                 class="<?= $current_page === 'products.php' ? 'underline text-gray-800' : 'text-gray-600' ?> hover:underline">
+11                  Products
+12              </a>
+13              <a href="cart.php"
+14                 class="<?= $current_page === 'cart.php' ? 'underline text-gray-800' : 'text-gray-600' ?> hover:underline">
+15                  Cart
+16              </a>
+17          </nav>
+18          <p class="text-sm text-gray-400 mt-6">© 2025 Продовольчий магазин «Весна»</p>
+19      </footer>
+20      </body>
+21      </html>
+
+store/products.json
+1       {
+2           "1": { "name": "Молоко пастеризоване", "price": 12 },
+3           "2": { "name": "Хліб чорний",          "price":  9 },
+4           "3": { "name": "Сир білий",            "price": 21 },
+5           "4": { "name": "Сметана 20%",          "price": 25 },
+6           "5": { "name": "Кефір 1%",             "price": 19 },
+7           "6": { "name": "Вода газована",        "price": 18 },
+8           "7": { "name": "Печиво \"Весна\"",     "price": 14 }
+9       }
+
+products.php
+01      <?php
+02      session_start();
+03
+04      $products = json_decode(file_get_contents('store/products.json'), true);
+05      $error = '';
+06
+07      if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+08          $quantities = $_POST['quantities'] ?? [];
+09
+10          $valid = false;
+11
+12          if (!isset($_SESSION['cart'])) {
+13              $_SESSION['cart'] = [];
+14          }
+15
+16          foreach ($quantities as $id => $count) {
+17              if (is_numeric($count) && (int)$count > 0) {
+18                  $valid = true;
+19                  $id = (int)$id;
+20                  $count = (int)$count;
+21
+22                  if (isset($_SESSION['cart'][$id])) {
+23                      $_SESSION['cart'][$id]['count'] += $count;
+24                  } else {
+25                      $_SESSION['cart'][$id] = [
+26                          'id' => $id,
+27                          'name' => $products[$id]['name'],
+28                          'price' => $products[$id]['price'],
+29                          'count' => $count
+30                      ];
+31                  }
+32              }
+33          }
+34
+35          if ($valid) {
+36              header("Location: cart.php");
+37              exit;
+38          } else {
+39              $error = 'Перевірте будь ласка введені дані';
+40          }
+41      }
+42
+43      include 'includes/header.php';
+44      ?>
+45
+46      <h1 class="text-2xl font-bold mb-6 text-center">Список товарів</h1>
+47
+48      <div class="flex w-full justify-center">
+49          <?php if ($error): ?>
+50              <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-8 flex w-[30rem] justify-center">
+51                  <?= htmlspecialchars($error) ?>
+52              </div>
+53          <?php endif; ?>
+54      </div>
+55
+56      <form method="POST" class="flex flex-col gap-4 items-center">
+57          <?php foreach ($products as $id => $product): ?>
+58              <div class="bg-white w-[30rem] p-4 shadow rounded-xl flex justify-between items-center">
+59                  <div>
+60                      <p class="font-semibold"><?= htmlspecialchars($product['name']) ?></p>
+61                      <p class="text-sm text-gray-600">Ціна: <?= $product['price'] ?> грн</p>
+62                  </div>
+63                  <div>
+64                      <label for="quantity_<?= $id ?>" class="mr-2">Кількість:</label>
+65                      <input 
+66                          type="number" 
+67                          name="quantities[<?= $id ?>]" 
+68                          id="quantity_<?= $id ?>" min="0" 
+69                          class="border rounded px-2 py-1 w-20" 
+70                          value="0"
+71                      >
+72                  </div>
+73              </div>
+74          <?php endforeach; ?>
+75
+76          <button type="submit" class="flex mt-4 bg-green-600 text-white px-8 py-2 rounded-xl shadow hover:bg-green-700">
+77              Додати в кошик
+78          </button>
+79      </form>
+80
+81      <?php include 'includes/footer.php'; ?>
+
+cart.php
+01      <?php
+02      session_start();
+03      include 'includes/header.php';
+04
+05      $cart = $_SESSION['cart'] ?? [];
+06
+07      if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove'])) {
+08          $removeId = (int)$_POST['remove'];
+09          if (isset($cart[$removeId])) {
+10              unset($cart[$removeId]);
+11              $_SESSION['cart'] = $cart;
+12              header('Location: cart.php');
+13              exit;
+14          }
+15      }
+16      ?>
+17
+18      <h1 class="text-2xl font-bold mb-12 text-center">Кошик</h1>
+19
+20      <?php if (empty($cart)): ?>
+21          <p class="text-center text-lg">Ваш кошик порожній. 
+22              <a href="products.php" class="text-green-600 underline">
+23                  Перейдіть до покупок
+24              </a>
+25          </p>
+26      <?php else: ?>
+27          <div class="overflow-x-auto px-80">
+28              <table class="min-w-full bg-white shadow rounded-lg">
+29                  <thead class="bg-gray-100">
+30                      <tr>
+31                          <th class="px-4 py-2 text-left">ID</th>
+32                          <th class="px-4 py-2 text-left">Назва</th>
+33                          <th class="px-4 py-2 text-left">Ціна</th>
+34                          <th class="px-4 py-2 text-left">Кількість</th>
+35                          <th class="px-4 py-2 text-left">Сума</th>
+36                          <th class="px-4 py-2 text-left">Дії</th>
+37                      </tr>
+38                  </thead>
+39                  <tbody>
+40                      <?php
+41                      $total = 0;
+42                      foreach ($cart as $item):
+43                          $sum = $item['price'] * $item['count'];
+44                          $total += $sum;
+45                      ?>
+46                          <tr class="border-t">
+47                              <td class="px-4 py-2"><?= $item['id'] ?></td>
+48                              <td class="px-4 py-2"><?= htmlspecialchars($item['name']) ?></td>
+49                              <td class="px-4 py-2"><?= $item['price'] ?> грн</td>
+50                              <td class="px-4 py-2"><?= $item['count'] ?></td>
+51                              <td class="px-4 py-2"><?= $sum ?> грн</td>
+52                              <td class="px-4 py-2">
+53                                  <form method="POST">
+54                                      <input type="hidden" name="remove" value="<?= $item['id'] ?>">
+55                                      <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">Видалити</button>
+56                                  </form>
+57                              </td>
+58                          </tr>
+59                      <?php endforeach; ?>
+60                      <tr class="bg-gray-100 font-bold">
+61                          <td class="px-4 py-2">Загальна сума:</td>
+62                          <td></td>
+63                          <td></td>
+64                          <td></td>
+65                          <td class="px-4 py-2"><?= $total ?> грн</td>
+66                          <td></td>
+67                      </tr>
+68                  </tbody>
+69              </table>
+70          </div>
+71          <div class="flex w-full justify-center gap-12 mt-20">
+72              <a href="home.php" class="flex justify-center w-36 mt-4 bg-gray-400 text-white px-8 py-2 rounded-xl shadow hover:bg-gray-500">
+73                  Скасувати
+74              </a>
+75              <a href="" class="flex w-36 justify-center mt-4 bg-green-600 text-white px-8 py-2 rounded-xl shadow hover:bg-green-700">
+76                  Оплатити
+77              </a>
+78          </div>
+79      <?php endif; ?>
+80
+81      <?php include 'includes/footer.php'; ?>

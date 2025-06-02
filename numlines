@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "Використання: $0 <файл>"
+  exit 1
+fi
+
+if [ ! -f "$1" ]; then
+  echo "Файл не знайдено: $1"
+  exit 1
+fi
+
+total_lines=$(wc -l < "$1")
+width=${#total_lines}
+
+nl -w $width -n rz -ba "$1"

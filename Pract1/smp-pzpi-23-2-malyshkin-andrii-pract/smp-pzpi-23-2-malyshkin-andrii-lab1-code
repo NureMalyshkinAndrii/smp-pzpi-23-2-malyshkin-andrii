@@ -1,0 +1,88 @@
+#!/bin/bash
+
+if (( $# != 2 )); then
+  echo "Not enough/Too many arguments" >&2
+  exit 1
+fi
+
+if (( $1 < 8 )); then
+  echo "Height should be greater then 7" >&2
+  exit 2
+fi
+if (( $2 < 7 )); then
+  echo "Width should be greater then 6" >&2
+  exit 3
+fi
+
+tree_height=$(( (($1 - 4) % 2 != 0) ? $1 - 1 : $1 ))
+snow_width=$(( ($2 % 2 == 0) ? $2 - 1 : $2 ))
+leaf_rows=$(( (tree_height - 1) / 2 ))
+
+if (( snow_width - (2 * leaf_rows - 1) != 2 )); then
+  echo "Can't draw the tree with provided arguments" >&2
+  exit 4
+fi
+
+current_char='#'
+
+draw_leaves() {
+  local start_line=$1
+  local end_line=$leaf_rows
+  for (( line = start_line; line <= end_line; line++ )); do
+    if [ "$current_char" = "*" ]; then
+      current_char="#"
+    else
+      current_char="*"
+    fi
+    local num_chars=$(( 2 * line - 1 ))
+    local spaces=$(( (snow_width - num_chars) / 2 ))
+    printf "%${spaces}s" ""
+    local row=""
+    local count=$num_chars
+    until (( count <= 0 )); do
+      row="${row}${current_char}"
+      count=$(( count - 1 ))
+    done
+    printf "%s\n" "$row"
+  done
+}
+
+draw_trunk() {
+  local trunk_line=""
+  for seg in 1 2 3; do
+    trunk_line="${trunk_line}#"
+  done
+  for (( i = 0; i < 2; i++ )); do
+    local pad=$(( (snow_width - 3) / 2 ))
+    printf "%${pad}s" ""
+    printf "%s\n" "$trunk_line"
+  done
+}
+
+draw_snow() {
+  local snow_line=""
+  local pos=0
+  while (( pos < snow_width )); do
+    snow_line="${snow_line}*"
+    pos=$(( pos + 1 ))
+  done
+  printf "%s\n" "$snow_line"
+}
+
+tier=1
+while (( tier <= 2 )); do
+  if (( tier == 1 )); then
+    draw_leaves 1
+  else
+    draw_leaves 2
+  fi
+  tier=$(( tier + 1 ))
+done
+
+draw_done=0
+until (( draw_done == 1 )); do
+  draw_trunk
+  draw_done=1
+done
+
+draw_snow

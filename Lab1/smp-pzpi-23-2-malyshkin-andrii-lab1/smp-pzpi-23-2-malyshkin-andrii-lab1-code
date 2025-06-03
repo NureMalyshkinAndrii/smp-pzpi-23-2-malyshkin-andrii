@@ -1,0 +1,123 @@
+#!/bin/bash
+
+if [ "$1" = "--version" ]; then
+    echo 'CIST-to-Google 1.0'
+    exit 0
+fi
+
+if [ "$1" = "--help" ]; then
+    echo "Usage: $0 [--help | --version] | [-q|--quiet] [[group] schedule.csv]"
+    echo 'Convert a CIST schedule CSV file into Google Calendar format'
+    echo 'The result will be saved in current directory in a file named "Google_<original_file_name>"'
+    echo 'Also the result will be printed to stdout unless -q or --quiet option is used'
+    echo -e " --help \t\tPrint help message and exit"
+    echo -e " --version \t\tPrint version info and exit"
+    echo -e " -q, --quiet \t\tDo not print the result to stdout"
+    echo -e " group \t\tOptional group name"
+    echo -e " schedule.csv \t\tCSV file to process"
+    exit 0
+fi
+
+output_stream="&1"
+if [ "$1" = "-q" -o "$1" = "--quiet" ]; then
+    output_stream=/dev/null
+    shift
+fi
+
+student_group=""
+input_file=""
+if [ $# -eq 2 ]; then
+    student_group="$1"
+    input_file="$2"
+elif [ $# -eq 1 ]; then
+    input_file="$1"
+fi
+
+available_files=$(ls TimeTable_??_??_20??.csv 2>/dev/null | sort)
+
+choose_option(){
+
+    select item in quit $1; do
+        if [ "$item" = "" ]; then
+            continue
+        elif [ "$item" = "quit" ]; then
+            return 1 
+        else
+            echo "$item"
+            return 0 
+        fi
+    done
+}
+
+if [ -z "$input_file" ]; then
+    input_file=$(choose_option "$available_files") || exit 0
+fi
+
+if [ ! -f "$input_file" ]; then
+    echo "Error: file '$input_file' is not exist." >&2
+    exit 1
+fi
+
+if [ ! -r "$input_file" ]; then
+    echo "Error: permission to read file '$input_file' denied." >&2
+    exit 2
+fi
+
+file_content=$(cat "$input_file" | sed 's/\r/\n/g' | iconv -f cp1251 -t utf8)
+
+available_groups=$(
+    echo "$file_content" \
+    | awk -v FPAT='[^,]*|"[^"]*"' '
+     NR > 1 {
+       gsub(/^"/, "", $1);
+       if (split($1, parts, " - ") != 1) print parts[1]
+     }
+    ' | sort | uniq
+)
+
+if [ -z "$student_group" ]; then
+    group_count=$(echo "$available_groups" | wc -l)
+    if [ "$group_count" -eq 1 ]; then
+        student_group=$(echo "$available_groups")
+    else
+        student_group=$(choose_option "$available_groups") || exit 0
+    fi
+fi
+
+if ! echo "$available_groups" | grep -q "$student_group"; then
+    echo "No '$student_group' group in '$input_file'."
+    student_group=$(choose_option "$available_groups") || exit 0
+fi
+
+echo "$file_content" \
+| awk -v FPAT='[^,]*|"[^"]*"' -v group_pattern="$([ -n "$student_group" ] && echo "^\"$student_group - ")" '
+    BEGIN {
+        print "Subject,Start Date,Start Time,End Date,End Time,Description"
+    }
+
+    function format_time(time_str) {
+        gsub(/:|"/, " ", time_str)
+        return strftime("%I:%M %p", mktime("1970 01 01" time_str))
+    }
+
+    function format_date(date_str) {
+        gsub(/"/, "", date_str)
+        split(date_str, date_parts, ".")
+        return strftime("%m/%d/%Y", mktime(date_parts[3] " " date_parts[2] " " date_parts[1] " 00 00 00"))
+    }
+
+    NR > 1 && $1 ~ group_pattern {
+        subject = $1
+        gsub(group_pattern "|^\"|\"$", "", subject)
+        
+        start_date = format_date($2)
+        start_time = format_time($3)
+        end_date = format_date($4)
+        end_time = format_time($5)
+        description = $12
+        
+        class_count[$2]++
+        
+        print "\"" subject "; №" class_count[$2] "\"," start_date "," start_time "," end_date "," end_time "," description
+}
+' | tee "Google_$(basename "$input_file")" >$output_stream

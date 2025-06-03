@@ -23,48 +23,26 @@ if ($page === 'logout') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    switch ($page) {
-        case 'login':
-            require_once 'logic/auth_handler.php';
-            break;
-        case 'products':
-            require_once 'logic/product_handler.php';
-            break;
-        case 'cart':
-            require_once 'logic/cart_handler.php';
-            break;
-        case 'profile':
-            require_once 'logic/profile_handler.php';
-            break;
-    }
+    match ($page) {
+        'login'   => require_once 'logic/auth_handler.php',
+        'products'=> require_once 'logic/product_handler.php',
+        'cart'    => require_once 'logic/cart_handler.php',
+        'profile' => require_once 'logic/profile_handler.php',
+        default   => null, 
+    };
 }
 
 include 'includes/header.php';
 
-switch ($page) {
-    case 'home':
-        require_once 'pages/home.php';
-        break;
-    case 'products':
-        require_once 'pages/products.php';
-        break;
-    case 'cart':
-        require_once 'pages/cart.php';
-        break;
-    case 'profile':
-        require_once 'pages/profile.php';
-        break;
-    case 'login':
-        require_once 'pages/login.php';
-        break;
-    case 'logout':
-        require_once 'logic/auth_handler.php';
-        break;
-    case '404':
-    default:
-        require_once 'pages/page404.php';
-        break;
-}
+match ($page) {
+    'home'     => require_once 'pages/home.php',
+    'products' => require_once 'pages/products.php',
+    'cart'     => require_once 'pages/cart.php',
+    'profile'  => require_once 'pages/profile.php',
+    'login'    => require_once 'pages/login.php',
+    '404'      => require_once 'pages/page404.php',
+    default    => require_once 'pages/page404.php',
+};
 
 include 'includes/footer.php';
 ?>

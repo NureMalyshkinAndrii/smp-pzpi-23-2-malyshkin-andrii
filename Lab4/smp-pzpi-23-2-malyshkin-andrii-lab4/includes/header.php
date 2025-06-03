@@ -84,8 +84,8 @@
                     </button>
 
                     <div id="userMenu" class="absolute right-0 mt-2 w-40 bg-white shadow-md rounded-xl border border-gray-200 hidden z-50">
-                        <a href="index.php?page=profile" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Профіль</a>
-                        <a href="index.php?page=logout" class="block px-4 py-2 text-red-600 hover:bg-red-100">Вийти</a>
+                        <a href="index.php?page=profile" class="block rounded-t-xl px-4 py-2 text-gray-700 hover:bg-gray-100">Profile</a>
+                        <a href="index.php?page=logout" class="block rounded-b-xl px-4 py-2 text-red-600 hover:bg-red-100">Logout</a>
                     </div>
                 </div>
             <?php else: ?>

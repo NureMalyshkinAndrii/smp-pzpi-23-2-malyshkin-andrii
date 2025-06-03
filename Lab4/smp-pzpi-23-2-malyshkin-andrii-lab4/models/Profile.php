@@ -35,7 +35,6 @@ class Profile {
     }
 
     public function update($userId, $firstName, $lastName, $birthDate, $bio, $photoPath = null) {
-        // Check if profile exists
         $stmt = $this->db->prepare('SELECT user_id FROM profiles WHERE user_id = ?');
         $stmt->bindValue(1, $userId, SQLITE3_INTEGER);
         $result = $stmt->execute();
@@ -106,7 +105,6 @@ class Profile {
         $this->photoPath = $profileData['photo_path'];
     }
 
-    // Getters
     public function getUserId() {
         return $this->userId;
     }
